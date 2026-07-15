@@ -120,18 +120,26 @@ class ARScanActivity : Activity() {
     }
 
     private fun transformedCoords(frame: Frame): FloatArray {
-        val raw = floatArrayOf(0f, 1f, 1f, 1f, 0f, 0f, 1f, 0f)
-        val src = ByteBuffer.allocateDirect(raw.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
-            .apply { put(raw); position(0) }
-        val dst = ByteBuffer.allocateDirect(raw.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+        // Coordenadas NDC dos 4 vertices do quad, na MESMA ordem do TRIANGLE_STRIP:
+        // (-1,-1), (1,-1), (-1,1), (1,1)
+        val ndc = floatArrayOf(
+            -1f, -1f,
+             1f, -1f,
+            -1f,  1f,
+             1f,  1f
+        )
+        val src = ByteBuffer.allocateDirect(ndc.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+            .apply { put(ndc); position(0) }
+        val dst = ByteBuffer.allocateDirect(ndc.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         frame.transformCoordinates2d(
             Coordinates2d.OPENGL_NORMALIZED_DEVICE_COORDINATES, src,
             Coordinates2d.TEXTURE_NORMALIZED, dst
         )
         dst.position(0)
-        val out = FloatArray(raw.size)
+        val out = FloatArray(ndc.size)
         dst.get(out)
         return out
+    
     }
 
     private fun maybeCapturePhoto(frame: Frame) {
