@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: realscan-server
+    env: docker
+    plan: standard
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    healthCheckPath: /health
