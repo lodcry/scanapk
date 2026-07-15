@@ -22,7 +22,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Session
-import com.google.ar.core.Config
 import com.google.ar.core.exceptions.UnavailableException
 import org.json.JSONArray
 
@@ -55,7 +54,7 @@ class MainActivity : AppCompatActivity() {
             DebugLog.e(DebugLog.Tag.SERVER, "Erro ao iniciar servidor: ${e.message}")
         }
 
-        // Verificação LOGO NO INÍCIO
+        // Verificação DIRETA do ARCore
         checkARCoreDirectly()
 
         val root = FrameLayout(this)
@@ -85,30 +84,21 @@ class MainActivity : AppCompatActivity() {
             val availability = ArCoreApk.getInstance().checkAvailability(this)
             DebugLog.log(DebugLog.Tag.ARCORE, "Availability: $availability")
             DebugLog.log(DebugLog.Tag.ARCORE, "isSupported: ${availability.isSupported}")
-            DebugLog.log(DebugLog.Tag.ARCORE, "isTransient: ${availability.isTransient}")
-            
-            when {
-                availability.isSupported -> {
-                    DebugLog.log(DebugLog.Tag.ARCORE, "✓ ARCore SUPORTADO")
-                    // Tenta criar sessão pra testar
-                    try {
-                        val session = Session(this)
-                        session.close()
-                        DebugLog.log(DebugLog.Tag.ARCORE, "✓ Session criada com sucesso")
-                    } catch (e: UnavailableException) {
-                        DebugLog.e(DebugLog.Tag.ARCORE, "Session falhou: ${e.message}")
-                    }
+
+            if (availability.isSupported) {
+                DebugLog.log(DebugLog.Tag.ARCORE, "✓ ARCore SUPORTADO")
+                try {
+                    val session = Session(this)
+                    session.close()
+                    DebugLog.log(DebugLog.Tag.ARCORE, "✓ Session criada com sucesso")
+                } catch (e: UnavailableException) {
+                    DebugLog.e(DebugLog.Tag.ARCORE, "Session falhou: ${e.message}")
                 }
-                availability.isTransient -> {
-                    DebugLog.log(DebugLog.Tag.ARCORE, "ARCore transient - precisa de update?")
-                }
-                else -> {
-                    DebugLog.e(DebugLog.Tag.ARCORE, "✕ ARCore NÃO SUPORTADO")
-                }
+            } else {
+                DebugLog.e(DebugLog.Tag.ARCORE, "✕ ARCore NÃO SUPORTADO")
             }
         } catch (e: Exception) {
             DebugLog.e(DebugLog.Tag.ARCORE, "Erro ao verificar: ${e.message}")
-            DebugLog.e(DebugLog.Tag.ARCORE, "Stack: ${e.stackTraceToString()}")
         }
     }
 
@@ -219,9 +209,9 @@ class MainActivity : AppCompatActivity() {
                 val supported = availability.isSupported
                 DebugLog.log(DebugLog.Tag.ARCORE, "isARAvailable() → $supported")
                 supported
-            } catch (e: Exception) { 
+            } catch (e: Exception) {
                 DebugLog.e(DebugLog.Tag.ARCORE, "isARAvailable erro: ${e.message}")
-                false 
+                false
             }
         }
 
