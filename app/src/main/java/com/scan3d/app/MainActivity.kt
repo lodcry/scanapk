@@ -54,9 +54,6 @@ class MainActivity : AppCompatActivity() {
             DebugLog.e(DebugLog.Tag.SERVER, "Erro ao iniciar servidor: ${e.message}")
         }
 
-        // Verificação DIRETA do ARCore
-        checkARCoreDirectly()
-
         val root = FrameLayout(this)
         webView = WebView(this)
         root.addView(webView, FrameLayout.LayoutParams(
@@ -76,7 +73,7 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(root)
         setupWebView()
-        checkCamera()
+        checkCamera() // ← PRIMEIRO pede permissão da câmera
     }
 
     private fun checkARCoreDirectly() {
@@ -93,6 +90,8 @@ class MainActivity : AppCompatActivity() {
                     DebugLog.log(DebugLog.Tag.ARCORE, "✓ Session criada com sucesso")
                 } catch (e: UnavailableException) {
                     DebugLog.e(DebugLog.Tag.ARCORE, "Session falhou: ${e.message}")
+                } catch (e: SecurityException) {
+                    DebugLog.e(DebugLog.Tag.ARCORE, "Permissão da câmera negada")
                 }
             } else {
                 DebugLog.e(DebugLog.Tag.ARCORE, "✕ ARCore NÃO SUPORTADO")
@@ -257,6 +256,8 @@ class MainActivity : AppCompatActivity() {
     private fun checkCamera() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED) {
+            // Permissão já concedida → verifica ARCore
+            checkARCoreDirectly()
             loadApp()
         } else {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQ_CAMERA)
@@ -272,8 +273,13 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQ_CAMERA) {
             val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-            if (granted) { pendingPermissionRequest?.grant(pendingPermissionRequest!!.resources) }
-            else { pendingPermissionRequest?.deny() }
+            if (granted) {
+                pendingPermissionRequest?.grant(pendingPermissionRequest!!.resources)
+                // Permissão concedida → verifica ARCore
+                checkARCoreDirectly()
+            } else {
+                pendingPermissionRequest?.deny()
+            }
             pendingPermissionRequest = null
             loadApp()
         }
