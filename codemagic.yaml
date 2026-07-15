@@ -13,6 +13,12 @@ workflows:
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > $CM_BUILD_DIR/local.properties
 
+      - name: Setup Gradle
+        script: |
+          cd $CM_BUILD_DIR
+          gradle wrapper --gradle-version=8.2
+          chmod +x gradlew
+
       - name: Build React → assets
         script: |
           cd $CM_BUILD_DIR/scan3d-react
