@@ -7,6 +7,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.graphics.Typeface
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -39,7 +40,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val handler = Handler(Looper.getMainLooper())
     private var sensorRunning = false
 
-    // acumuladores de sensor para envio em batch
     private var lastAlpha = 0.0
     private var lastBeta  = 0.0
     private var lastGamma = 0.0
@@ -71,7 +71,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT
         ))
 
-        // botão de log (canto superior direito, sempre visível em debug)
         val btnLog = Button(this).apply {
             text = "📋"; textSize = 14f; stateListAnimator = null
             setBackgroundColor(0xCC1a1a26.toInt()); setTextColor(0xFF00ffcc.toInt())
@@ -109,7 +108,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
-                // injeta polyfill de sensor nativo
                 view.evaluateJavascript("""
                     (function(){
                         window.__NATIVE_SENSORS__ = true;
@@ -162,7 +160,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // ── BRIDGE JS ↔ KOTLIN ──────────────────────────────────────
     inner class Scan3DBridge {
 
         @JavascriptInterface
@@ -207,7 +204,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // ── SENSORES ────────────────────────────────────────────────
     private fun registerSensors() {
         if (sensorRunning) return
         sensorRunning = true
@@ -259,7 +255,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         webView.post { webView.evaluateJavascript(js, null) }
     }
 
-    // ── CÂMERA ──────────────────────────────────────────────────
     private fun checkCamera() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED) {
@@ -287,7 +282,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     pendingPermissionRequest?.deny()
                     pendingPermissionRequest = null
                     DebugLog.e(DebugLog.Tag.CAMERA, "Câmera negada pelo usuário")
-                    loadApp() // carrega mesmo assim — modo demo
+                    loadApp()
                 }
             }
         }
@@ -303,7 +298,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // ── LOG DIALOG ──────────────────────────────────────────────
     private fun showLogDialog() {
         val dialog = android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         val root = LinearLayout(this).apply {
