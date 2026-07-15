@@ -20,8 +20,11 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import org.json.JSONArray
 import com.google.ar.core.ArCoreApk
+import com.google.ar.core.Session
+import com.google.ar.core.Config
+import com.google.ar.core.exceptions.UnavailableException
+import org.json.JSONArray
 
 class MainActivity : AppCompatActivity() {
 
@@ -52,6 +55,9 @@ class MainActivity : AppCompatActivity() {
             DebugLog.e(DebugLog.Tag.SERVER, "Erro ao iniciar servidor: ${e.message}")
         }
 
+        // Verificação LOGO NO INÍCIO
+        checkARCoreDirectly()
+
         val root = FrameLayout(this)
         webView = WebView(this)
         root.addView(webView, FrameLayout.LayoutParams(
@@ -72,6 +78,38 @@ class MainActivity : AppCompatActivity() {
         setContentView(root)
         setupWebView()
         checkCamera()
+    }
+
+    private fun checkARCoreDirectly() {
+        try {
+            val availability = ArCoreApk.getInstance().checkAvailability(this)
+            DebugLog.log(DebugLog.Tag.ARCORE, "Availability: $availability")
+            DebugLog.log(DebugLog.Tag.ARCORE, "isSupported: ${availability.isSupported}")
+            DebugLog.log(DebugLog.Tag.ARCORE, "isTransient: ${availability.isTransient}")
+            
+            when {
+                availability.isSupported -> {
+                    DebugLog.log(DebugLog.Tag.ARCORE, "✓ ARCore SUPORTADO")
+                    // Tenta criar sessão pra testar
+                    try {
+                        val session = Session(this)
+                        session.close()
+                        DebugLog.log(DebugLog.Tag.ARCORE, "✓ Session criada com sucesso")
+                    } catch (e: UnavailableException) {
+                        DebugLog.e(DebugLog.Tag.ARCORE, "Session falhou: ${e.message}")
+                    }
+                }
+                availability.isTransient -> {
+                    DebugLog.log(DebugLog.Tag.ARCORE, "ARCore transient - precisa de update?")
+                }
+                else -> {
+                    DebugLog.e(DebugLog.Tag.ARCORE, "✕ ARCore NÃO SUPORTADO")
+                }
+            }
+        } catch (e: Exception) {
+            DebugLog.e(DebugLog.Tag.ARCORE, "Erro ao verificar: ${e.message}")
+            DebugLog.e(DebugLog.Tag.ARCORE, "Stack: ${e.stackTraceToString()}")
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -162,10 +200,14 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun startARScan() {
-            DebugLog.log(DebugLog.Tag.ARCORE, "startARScan() chamado")
+            DebugLog.log(DebugLog.Tag.ARCORE, "startARScan() chamado pelo JS")
             handler.post {
-                val intent = Intent(this@MainActivity, ARScanActivity::class.java)
-                startActivityForResult(intent, REQ_AR)
+                try {
+                    val intent = Intent(this@MainActivity, ARScanActivity::class.java)
+                    startActivityForResult(intent, REQ_AR)
+                } catch (e: Exception) {
+                    DebugLog.e(DebugLog.Tag.ARCORE, "Erro ao iniciar AR: ${e.message}")
+                }
             }
         }
 
@@ -174,8 +216,13 @@ class MainActivity : AppCompatActivity() {
             return try {
                 val availability = ArCoreApk.getInstance()
                     .checkAvailability(this@MainActivity)
-                availability.isSupported
-            } catch (e: Exception) { false }
+                val supported = availability.isSupported
+                DebugLog.log(DebugLog.Tag.ARCORE, "isARAvailable() → $supported")
+                supported
+            } catch (e: Exception) { 
+                DebugLog.e(DebugLog.Tag.ARCORE, "isARAvailable erro: ${e.message}")
+                false 
+            }
         }
 
         @JavascriptInterface
@@ -193,13 +240,14 @@ class MainActivity : AppCompatActivity() {
             REQ_AR -> {
                 if (resultCode == RESULT_OK && data != null) {
                     val pointsJson = data.getStringExtra(ARScanActivity.RESULT_POINTS) ?: "[]"
-                    DebugLog.log(DebugLog.Tag.ARCORE, "AR finalizado, recebendo pontos")
+                    DebugLog.log(DebugLog.Tag.ARCORE, "AR finalizado, recebendo ${pointsJson.length} caracteres")
                     handler.post {
                         webView.evaluateJavascript(
                             "window.__onARScanComplete && window.__onARScanComplete($pointsJson)", null
                         )
                     }
                 } else {
+                    DebugLog.log(DebugLog.Tag.ARCORE, "AR cancelado")
                     handler.post {
                         webView.evaluateJavascript(
                             "window.__onARScanCancelled && window.__onARScanCancelled()", null
