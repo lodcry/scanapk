@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.view.SurfaceView
 import android.view.WindowManager
 import android.widget.*
 import com.google.ar.core.*
@@ -20,8 +21,11 @@ import javax.microedition.khronos.opengles.GL10
 class ARScanActivity : Activity() {
 
     private var session: Session? = null
+    private lateinit var surfaceView: SurfaceView
     private lateinit var glView: GLSurfaceView
     private val handler = Handler(Looper.getMainLooper())
+    private var displayRotationHelper: DisplayRotationHelper? = null
+    private var backgroundRenderer: BackgroundRenderer? = null
 
     private val pointBuffer = mutableListOf<JSONObject>()
     private var scanning = false
@@ -46,22 +50,36 @@ class ARScanActivity : Activity() {
         val root = FrameLayout(this)
         root.setBackgroundColor(Color.BLACK)
 
+        // SurfaceView pra câmera do ARCore
+        surfaceView = SurfaceView(this)
+        root.addView(surfaceView, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
+
+        // GLSurfaceView pra renderizar
         glView = GLSurfaceView(this).apply {
             setEGLContextClientVersion(2)
+            setPreserveEGLContextOnPause(true)
             setRenderer(object : GLSurfaceView.Renderer {
                 override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
                     GLES20.glClearColor(0f, 0f, 0f, 1f)
+                    backgroundRenderer = BackgroundRenderer()
+                    backgroundRenderer?.createOnGlThread(this@ARScanActivity)
                 }
                 override fun onSurfaceChanged(gl: GL10?, w: Int, h: Int) {
                     GLES20.glViewport(0, 0, w, h)
-                    session?.setDisplayGeometry(0, w, h)
+                    displayRotationHelper?.onSurfaceChanged(w, h)
                 }
                 override fun onDrawFrame(gl: GL10?) {
                     GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
                     val s = session ?: return
                     try {
-                        s.setCameraTextureName(0)
+                        displayRotationHelper?.updateSessionIfNeeded(s)
+                        s.setCameraTextureName(backgroundRenderer?.textureId ?: 0)
                         val frame = s.update()
+                        backgroundRenderer?.draw(frame)
+
                         if (scanning) processFrame(frame)
                         fpsCount++
                         val now = System.currentTimeMillis()
@@ -90,6 +108,7 @@ class ARScanActivity : Activity() {
         ))
 
         setContentView(root)
+        displayRotationHelper = DisplayRotationHelper(this)
         initARCore()
     }
 
@@ -252,21 +271,10 @@ class ARScanActivity : Activity() {
                 if (frameCount % 10 == 0) {
                     val pts = totalPoints
                     handler.post { tvPoints.text = "$pts PTS" }
-                    pushToReact(batch)
                 }
             }
         } finally {
             cloud.release()
-        }
-    }
-
-    private fun pushToReact(batch: List<JSONObject>) {
-        val arr = JSONArray()
-        batch.forEach { arr.put(it) }
-        MainActivity.instance?.runOnUiThread {
-            MainActivity.instance?.webView?.evaluateJavascript(
-                "window.__onARPoints && window.__onARPoints(${arr})", null
-            )
         }
     }
 
@@ -282,7 +290,7 @@ class ARScanActivity : Activity() {
 
     private fun initARCore() {
         try {
-            session = Session(this, setOf(Session.Feature.SHARED_CAMERA)).also { s ->
+            session = Session(this).also { s ->
                 val config = Config(s).apply {
                     depthMode = Config.DepthMode.AUTOMATIC
                     updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
@@ -292,9 +300,6 @@ class ARScanActivity : Activity() {
             }
             handler.post { tvStatus.text = "◈ ARCORE PRONTO" }
             DebugLog.log(DebugLog.Tag.ARCORE, "Session iniciada com Depth API")
-        } catch (e: UnavailableUserDeclinedInstallationException) {
-            DebugLog.e(DebugLog.Tag.ARCORE, "AR não instalado: ${e.message}")
-            finish()
         } catch (e: Exception) {
             DebugLog.e(DebugLog.Tag.ARCORE, "Erro ARCore: ${e.message}")
             finish()
