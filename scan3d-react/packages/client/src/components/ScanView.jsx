@@ -122,25 +122,25 @@ export default function ScanView({ goViewer, goScans }) {
       try {
         const ok = window.Scan3DBridge.isARAvailable()
         setArReady(ok)
-        DebugLog_log('BRIDGE', `isARAvailable → ${ok}`)
-      } catch(e) { setArReady(false) }
+        console.log('[BRIDGE]', `isARAvailable → ${ok}`)
+      } catch(e) {
+        console.error('[BRIDGE] erro:', e)
+        setArReady(false)
+      }
     }
   }, [])
 
-  // Recebe pontos reais do ARCore em tempo real (durante o scan)
   useEffect(() => {
     window.__onARPoints = (pts) => {
       addPoints(pts)
       bufRef.current.push(...pts)
     }
-    // Recebe pontos finais quando o scan termina
     window.__onARScanComplete = async (pts) => {
       addPoints(pts)
       setScanning(false)
       setMode('CONCLUÍDO')
       toast_(`✓ ${pts.length.toLocaleString()} PONTOS REAIS`)
       clearInterval(pushTimer.current)
-      // Salva tudo no banco
       if (pts.length > 0) {
         try {
           let id = scanIdRef.current
