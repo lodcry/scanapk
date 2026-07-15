@@ -58,7 +58,7 @@ class ARScanActivity : Activity() {
                 }
                 override fun onSurfaceChanged(gl: GL10?, w: Int, h: Int) {
                     GLES20.glViewport(0, 0, w, h)
-                    session?.setDisplayGeometry(Session.TARGET_FPS_30, w, h)
+                    session?.setDisplayGeometry(0, w, h)
                 }
                 override fun onDrawFrame(gl: GL10?) {
                     GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
@@ -130,8 +130,8 @@ class ARScanActivity : Activity() {
         val btnConfirm = Button(this).apply { text="✓ SALVAR"; textSize=12f; stateListAnimator=null; setBackgroundColor(0xFF00ffcc.toInt()); setTextColor(0xFF000000.toInt()); setPadding(dp(24),dp(10),dp(24),dp(10)); isEnabled=false; alpha=0.4f }
         val btnCancel = Button(this).apply { text="✕"; textSize=12f; stateListAnimator=null; setBackgroundColor(Color.TRANSPARENT); setTextColor(0xFFff6060.toInt()); setPadding(dp(16),dp(10),dp(16),dp(10)) }
 
-        btnScan.setOnClickListener { scanning=true; btnScan.isEnabled=false; btnScan.alpha=0.4f; btnStop.isEnabled=true; btnStop.alpha=1f; tvStatus.text="● SCANNING — MOVA O CELULAR"; DebugLog.log(DebugLog.Tag.ARCORE,"Scan iniciado") }
-        btnStop.setOnClickListener { scanning=false; btnStop.isEnabled=false; btnStop.alpha=0.4f; btnConfirm.isEnabled=true; btnConfirm.alpha=1f; tvStatus.text="◈ PARADO — ${totalPoints} PTS CAPTURADOS"; DebugLog.log(DebugLog.Tag.ARCORE,"Scan parado, $totalPoints pts") }
+        btnScan.setOnClickListener { scanning=true; btnScan.isEnabled=false; btnScan.alpha=0.4f; btnStop.isEnabled=true; btnStop.alpha=1f; tvStatus.text="● SCANNING — MOVA O CELULAR" }
+        btnStop.setOnClickListener { scanning=false; btnStop.isEnabled=false; btnStop.alpha=0.4f; btnConfirm.isEnabled=true; btnConfirm.alpha=1f; tvStatus.text="◈ PARADO — ${totalPoints} PTS CAPTURADOS" }
         btnConfirm.setOnClickListener { finishWithPoints() }
         btnCancel.setOnClickListener { setResult(RESULT_CANCELED); finish() }
 
@@ -176,7 +176,6 @@ class ARScanActivity : Activity() {
                 s.configure(Config(s).apply {
                     depthMode = Config.DepthMode.AUTOMATIC
                     updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-                    planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                 })
             }
             handler.post { tvStatus.text = "◈ ARCORE PRONTO" }
