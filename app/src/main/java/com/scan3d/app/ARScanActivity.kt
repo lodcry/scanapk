@@ -285,9 +285,7 @@ class ARScanActivity : Activity() {
     private fun initARCore() {
         try {
             session = Session(this).also { s ->
-                val config = Config(s)
-                config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-                s.configure(config)
+                s.configure(s.config)
             }
             handler.post { tvStatus.text = "◈ ARCORE PRONTO" }
             DebugLog.log(DebugLog.Tag.ARCORE, "Session iniciada")
@@ -296,7 +294,6 @@ class ARScanActivity : Activity() {
             finish()
         }
     }
-
     override fun onResume() { super.onResume(); try { session?.resume() } catch (e: Exception) {}; glView.onResume() }
     override fun onPause() { super.onPause(); glView.onPause(); session?.pause() }
     override fun onDestroy() { session?.close(); super.onDestroy() }
