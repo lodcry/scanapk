@@ -21,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
+import com.google.ar.core.ArCoreApk
 
 class MainActivity : AppCompatActivity() {
 
