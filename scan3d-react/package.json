@@ -1,0 +1,11 @@
+{
+  "name": "scan3d-monorepo",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "npm run build -w packages/client"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
